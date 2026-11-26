@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const prisma = require("./config/prisma");
 
 dotenv.config();
 
@@ -44,6 +45,26 @@ app.get("/", (req, res) => {
     message: "Welcome to EduMind AI API",
     version: "1.0.0",
   });
+});
+
+// Database health check
+app.get("/api/health/db", async (req, res) => {
+  try {
+    await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      success: true,
+      message: "Database connected successfully!",
+    });
+  } catch (error) {
+    console.error("Database connection error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed!",
+    });
+  }
 });
 
 // 404 handler
