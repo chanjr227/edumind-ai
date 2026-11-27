@@ -6,6 +6,9 @@ const {
   getUserById,
   createUser,
   updateUser,
+  updateUserRole,
+  updateUserStatus,
+  deleteUser,
 } = require("../controllers/userController");
 
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
@@ -24,5 +27,14 @@ router.get("/:id", getUserById);
 
 // Update user
 router.put("/:id", updateUser);
+
+// Update user role
+router.patch("/:id/role", updateUserRole);
+
+// Update user account status
+router.patch("/:id/status", updateUserStatus);
+
+// Delete user
+router.delete("/:id", deleteUser);
 
 module.exports = router;

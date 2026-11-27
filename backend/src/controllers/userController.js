@@ -373,9 +373,236 @@ const updateUser = async (req, res) => {
   }
 };
 
+// UPDATE USER ROLE
+const updateUserRole = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { role } = req.body;
+
+    // Validate user ID
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    // Validate role
+    const allowedRoles = ["ADMIN", "TEACHER", "STUDENT"];
+
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Allowed roles: ADMIN, TEACHER, STUDENT",
+      });
+    }
+
+    // Check whether user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prevent changing SUPER_ADMIN role
+    if (existingUser.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "SUPER_ADMIN role cannot be changed",
+      });
+    }
+
+    // Update role
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    console.error("Update user role error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user role",
+    });
+  }
+};
+
+// UPDATE USER ACCOUNT STATUS
+const updateUserStatus = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { isActive } = req.body;
+
+    // Validate user ID
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    // Validate status
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isActive must be a boolean (true or false)",
+      });
+    }
+
+    // Check whether user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prevent changing SUPER_ADMIN status
+    if (existingUser.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "SUPER_ADMIN account status cannot be changed",
+      });
+    }
+
+    // Update account status
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `User account ${isActive ? "activated" : "deactivated"} successfully`,
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    console.error("Update user status error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user status",
+    });
+  }
+};
+
+// DELETE USER
+const deleteUser = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    // Validate user ID
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    // Prevent deleting own account
+    if (Number(req.user.id) === id) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
+    }
+
+    // Check whether user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prevent deleting SUPER_ADMIN
+    if (existingUser.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "SUPER_ADMIN account cannot be deleted",
+      });
+    }
+
+    // Delete user
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      data: {
+        deletedUser: {
+          id: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          role: existingUser.role,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Delete user error:", error);
+
+    // Handle foreign key constraint
+    if (error.code === "P2003") {
+      return res.status(409).json({
+        success: false,
+        message: "Cannot delete user because related data still exists",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete user",
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
+  updateUserRole,
+  updateUserStatus,
+  deleteUser,
 };
