@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const prisma = require("./config/prisma");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 dotenv.config();
 
@@ -27,6 +28,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Authentication Routes
 app.use("/api/auth", authRoutes);
+
+// User Management Routes
+app.use("/api/users", userRoutes);
 
 // Logger
 if (process.env.NODE_ENV === "development") {
