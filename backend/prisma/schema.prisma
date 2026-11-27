@@ -14,6 +14,18 @@ enum UserRole {
   STUDENT
 }
 
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   name      String   @db.VarChar(150)
@@ -24,5 +36,30 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  courses Course[] @relation("CourseCreator")
   @@map("users")
 }
+
+
+model Course {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(200)
+  slug        String       @unique @db.VarChar(220)
+  description String       @db.Text
+  thumbnail   String?      @db.VarChar(500)
+  level       CourseLevel  @default(BEGINNER)
+  status      CourseStatus @default(DRAFT)
+
+  createdById Int
+  creator     User         @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([createdById])
+  @@index([status])
+  @@index([level])
+  @@map("courses")
+}
+
