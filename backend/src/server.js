@@ -7,6 +7,7 @@ const prisma = require("./config/prisma");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const enrollmentRoutes = require("./routes/enrollmentRoutes");
 
 dotenv.config();
 
@@ -34,6 +35,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
 app.use("/api/courses", courseRoutes);
+
+app.use("/api/enrollments", enrollmentRoutes);
 
 // Logger
 if (process.env.NODE_ENV === "development") {

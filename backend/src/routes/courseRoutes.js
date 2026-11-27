@@ -9,6 +9,7 @@ const {
   deleteCourse,
   publishCourse,
   archiveCourse,
+  restoreCourse,
 } = require("../controllers/courseController");
 
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
@@ -67,6 +68,14 @@ router.patch(
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN", "TEACHER"),
   archiveCourse,
+);
+
+// RESTORE Course
+router.patch(
+  "/:id/restore",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "TEACHER"),
+  restoreCourse,
 );
 
 module.exports = router;

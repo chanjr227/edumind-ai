@@ -37,6 +37,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   courses Course[] @relation("CourseCreator")
+  enrollments CourseEnrollment[] @relation("StudentEnrollments")
   @@map("users")
 }
 
@@ -57,9 +58,65 @@ model Course {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+sections CourseSection[]
+enrollments CourseEnrollment[]
   @@index([createdById])
   @@index([status])
   @@index([level])
   @@map("courses")
 }
 
+model CourseEnrollment {
+  id         Int      @id @default(autoincrement())
+  studentId  Int
+  courseId   Int
+
+  student    User     @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  enrolledAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+  @@map("course_enrollments")
+}
+
+
+model CourseSection {
+  id          Int            @id @default(autoincrement())
+  courseId    Int
+  title       String         @db.VarChar(200)
+  description String?        @db.Text
+  order       Int            @default(0)
+
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     CourseLesson[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([courseId, order])
+  @@index([courseId])
+  @@map("course_sections")
+}
+
+model CourseLesson {
+  id              Int           @id @default(autoincrement())
+  sectionId       Int
+  title           String        @db.VarChar(200)
+  content         String?       @db.LongText
+  videoUrl        String?       @db.VarChar(500)
+  durationMinutes Int?
+  order           Int           @default(0)
+  isPreview       Boolean       @default(false)
+
+  section         CourseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([sectionId, order])
+  @@index([sectionId])
+  @@map("course_lessons")
+}

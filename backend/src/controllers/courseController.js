@@ -130,9 +130,120 @@ const createCourse = async (req, res) => {
 };
 
 // GET ALL COURSES
+
+// GET ALL COURSES
 const getAllCourses = async (req, res) => {
   try {
+    const {
+      search,
+      status,
+      level,
+      createdById,
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      order = "desc",
+    } = req.query;
+
+    // Validate pagination
+    const currentPage = Number(page);
+    const pageSize = Number(limit);
+
+    if (
+      !Number.isInteger(currentPage) ||
+      currentPage < 1 ||
+      !Number.isInteger(pageSize) ||
+      pageSize < 1 ||
+      pageSize > 100
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pagination parameters",
+      });
+    }
+
+    // Validate filters
+    const allowedStatuses = ["DRAFT", "PUBLISHED", "ARCHIVED"];
+    const allowedLevels = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
+
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course status",
+      });
+    }
+
+    if (level && !allowedLevels.includes(level)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course level",
+      });
+    }
+
+    // Validate sorting
+    const allowedSortFields = ["title", "createdAt", "updatedAt"];
+
+    if (!allowedSortFields.includes(sortBy)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid sorting field",
+      });
+    }
+
+    if (!["asc", "desc"].includes(order)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid sorting order",
+      });
+    }
+
+    // Build filter
+    const where = {};
+
+    if (search) {
+      where.OR = [
+        {
+          title: {
+            contains: search.trim(),
+          },
+        },
+        {
+          description: {
+            contains: search.trim(),
+          },
+        },
+      ];
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (level) {
+      where.level = level;
+    }
+
+    if (createdById !== undefined) {
+      const creatorId = Number(createdById);
+
+      if (!Number.isInteger(creatorId) || creatorId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid creator ID",
+        });
+      }
+
+      where.createdById = creatorId;
+    }
+
+    // Get total matching courses
+    const total = await prisma.course.count({
+      where,
+    });
+
+    // Get courses
     const courses = await prisma.course.findMany({
+      where,
       include: {
         creator: {
           select: {
@@ -143,15 +254,20 @@ const getAllCourses = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        [sortBy]: order,
       },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
     });
 
     return res.status(200).json({
       success: true,
       message: "Courses retrieved successfully",
       data: {
-        total: courses.length,
+        total,
+        page: currentPage,
+        limit: pageSize,
+        totalPages: Math.ceil(total / pageSize),
         courses,
       },
     });
@@ -560,6 +676,75 @@ const archiveCourse = async (req, res) => {
   }
 };
 
+// RESTORE COURSE
+const restoreCourse = async (req, res) => {
+  try {
+    const courseId = Number(req.params.id);
+
+    // Validate course ID
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course ID",
+      });
+    }
+
+    // Find course
+    const existingCourse = await prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!existingCourse) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    // Check teacher ownership
+    if (
+      req.user.role === "TEACHER" &&
+      existingCourse.createdById !== req.user.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to restore this course",
+      });
+    }
+
+    // Only archived courses can be restored
+    if (existingCourse.status !== "ARCHIVED") {
+      return res.status(400).json({
+        success: false,
+        message: "Only archived courses can be restored",
+      });
+    }
+
+    // Restore course
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        status: "PUBLISHED",
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Course restored successfully",
+      data: {
+        course,
+      },
+    });
+  } catch (error) {
+    console.error("Restore course error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to restore course",
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getAllCourses,
@@ -568,4 +753,5 @@ module.exports = {
   deleteCourse,
   publishCourse,
   archiveCourse,
+  restoreCourse,
 };
