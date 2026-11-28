@@ -12,6 +12,8 @@ const sectionRoutes = require("./routes/sectionRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
 // Route untuk fitur pembelajaran siswa
 const learningRoutes = require("./routes/learningRoutes");
+// Mengambil routes course review
+const reviewRoutes = require("./routes/reviewRoutes");
 
 dotenv.config();
 
@@ -48,6 +50,9 @@ app.use("/api/lessons", lessonRoutes);
 
 // Endpoint untuk fitur pembelajaran siswa
 app.use("/api/learning", learningRoutes);
+
+// Menghubungkan endpoint course review
+app.use("/api/reviews", reviewRoutes);
 
 // Logger
 if (process.env.NODE_ENV === "development") {

@@ -38,8 +38,16 @@ model User {
 
 // Relasi ke seluruh progres lesson yang dimiliki siswa
 lessonProgress LessonProgress[] @relation("StudentLessonProgress")
-  courses Course[] @relation("CourseCreator")
-  enrollments CourseEnrollment[] @relation("StudentEnrollments")
+
+// Relasi ke kursus yang dibuat
+courses Course[] @relation("CourseCreator")
+
+// Relasi ke kursus yang diikuti
+enrollments CourseEnrollment[] @relation("StudentEnrollments")
+
+// Relasi ke review yang dibuat siswa
+reviews CourseReview[]
+
   @@map("users")
 }
 
@@ -59,6 +67,9 @@ model Course {
   publishedAt DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+// Relasi ke seluruh review yang diberikan siswa
+reviews CourseReview[]
 
 sections CourseSection[]
 enrollments CourseEnrollment[]
@@ -171,4 +182,46 @@ model LessonProgress {
 
   // Nama tabel di database MySQL
   @@map("lesson_progress")
+}
+
+// Menyimpan review dan rating yang diberikan siswa pada kursus
+model CourseReview {
+  // ID unik review
+  id Int @id @default(autoincrement())
+
+  // ID siswa yang memberikan review
+  studentId Int
+
+  // ID kursus yang diberikan review
+  courseId Int
+
+  // Rating kursus dari 1 sampai 5 bintang
+  rating Int
+
+  // Komentar atau ulasan dari siswa
+  comment String? @db.Text
+
+  // Relasi ke siswa
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Relasi ke kursus
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Waktu review dibuat
+  createdAt DateTime @default(now())
+
+  // Waktu review diperbarui
+  updatedAt DateTime @updatedAt
+
+  // Satu siswa hanya boleh memberikan satu review pada satu kursus
+  @@unique([studentId, courseId])
+
+  // Index pencarian berdasarkan siswa
+  @@index([studentId])
+
+  // Index pencarian berdasarkan kursus
+  @@index([courseId])
+
+  // Nama tabel di database MySQL
+  @@map("course_reviews")
 }

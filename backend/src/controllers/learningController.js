@@ -457,9 +457,172 @@ const completeLesson = async (req, res) => {
   }
 };
 
+// =====================================================
+// GET STUDENT DASHBOARD
+// Menampilkan statistik dan ringkasan pembelajaran siswa
+// =====================================================
+const getStudentDashboard = async (req, res) => {
+  try {
+    // Mengambil ID siswa dari token JWT
+    const studentId = Number(req.user.id);
+
+    // Mengambil seluruh kursus yang diikuti siswa
+    const enrollments = await prisma.courseEnrollment.findMany({
+      where: {
+        studentId,
+      },
+      orderBy: {
+        enrolledAt: "desc",
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            thumbnail: true,
+            level: true,
+            status: true,
+
+            // Mengambil seluruh section dan lesson dalam kursus
+            sections: {
+              orderBy: {
+                order: "asc",
+              },
+              select: {
+                lessons: {
+                  orderBy: {
+                    order: "asc",
+                  },
+                  select: {
+                    id: true,
+
+                    // Mengambil progres milik siswa yang sedang login
+                    progress: {
+                      where: {
+                        studentId,
+                      },
+                      select: {
+                        isCompleted: true,
+                        lastAccessedAt: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Menyiapkan variabel statistik dashboard
+    let completedCourses = 0;
+    let totalProgressPercentage = 0;
+
+    // Menyusun daftar kursus beserta progres belajar
+    const courses = enrollments.map((enrollment) => {
+      const course = enrollment.course;
+
+      // Menggabungkan seluruh lesson dari semua section
+      const lessons = course.sections.flatMap((section) => section.lessons);
+
+      // Menghitung total lesson dalam kursus
+      const totalLessons = lessons.length;
+
+      // Menghitung jumlah lesson yang sudah diselesaikan
+      const completedLessons = lessons.filter(
+        (lesson) => lesson.progress[0]?.isCompleted === true,
+      ).length;
+
+      // Menghitung persentase progres kursus
+      const progressPercentage =
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : 0;
+
+      // Menghitung kursus yang sudah selesai seluruhnya
+      const isCompleted = totalLessons > 0 && completedLessons === totalLessons;
+
+      if (isCompleted) {
+        completedCourses++;
+      }
+
+      // Menambahkan progres kursus ke total progres
+      totalProgressPercentage += progressPercentage;
+
+      // Mengumpulkan waktu akses terakhir seluruh lesson
+      const accessDates = lessons
+        .flatMap((lesson) => lesson.progress)
+        .map((progress) => progress.lastAccessedAt)
+        .filter(Boolean);
+
+      // Mengurutkan waktu akses dari yang terbaru
+      const lastAccessedAt =
+        accessDates.length > 0
+          ? new Date(Math.max(...accessDates.map((date) => date.getTime())))
+          : null;
+
+      // Mengembalikan data kursus untuk dashboard
+      return {
+        id: course.id,
+        title: course.title,
+        slug: course.slug,
+        thumbnail: course.thumbnail,
+        level: course.level,
+        status: course.status,
+        enrolledAt: enrollment.enrolledAt,
+        totalLessons,
+        completedLessons,
+        progressPercentage,
+        isCompleted,
+        lastAccessedAt,
+      };
+    });
+
+    // Menghitung jumlah kursus yang diikuti
+    const totalEnrolledCourses = courses.length;
+
+    // Menghitung jumlah kursus yang masih berjalan
+    const inProgressCourses = courses.filter(
+      (course) => !course.isCompleted,
+    ).length;
+
+    // Menghitung rata-rata progres seluruh kursus
+    const overallProgress =
+      totalEnrolledCourses > 0
+        ? Math.round(totalProgressPercentage / totalEnrolledCourses)
+        : 0;
+
+    // Mengirimkan ringkasan dashboard kepada siswa
+    return res.status(200).json({
+      success: true,
+      message: "Student dashboard retrieved successfully",
+      data: {
+        statistics: {
+          totalEnrolledCourses,
+          completedCourses,
+          inProgressCourses,
+          overallProgress,
+        },
+        courses,
+      },
+    });
+  } catch (error) {
+    // Mencatat error untuk kebutuhan debugging
+    console.error("Get Student Dashboard Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve student dashboard",
+    });
+  }
+};
+
 // Mengekspor controller agar bisa digunakan oleh routes
 module.exports = {
   getCourseCurriculum,
   getLessonContent,
   completeLesson,
+  getStudentDashboard,
 };
