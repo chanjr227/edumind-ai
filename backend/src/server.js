@@ -8,6 +8,10 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
+const sectionRoutes = require("./routes/sectionRoutes");
+const lessonRoutes = require("./routes/lessonRoutes");
+// Route untuk fitur pembelajaran siswa
+const learningRoutes = require("./routes/learningRoutes");
 
 dotenv.config();
 
@@ -37,6 +41,13 @@ app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 
 app.use("/api/enrollments", enrollmentRoutes);
+
+app.use("/api/sections", sectionRoutes);
+
+app.use("/api/lessons", lessonRoutes);
+
+// Endpoint untuk fitur pembelajaran siswa
+app.use("/api/learning", learningRoutes);
 
 // Logger
 if (process.env.NODE_ENV === "development") {

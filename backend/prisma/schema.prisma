@@ -36,6 +36,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+// Relasi ke seluruh progres lesson yang dimiliki siswa
+lessonProgress LessonProgress[] @relation("StudentLessonProgress")
   courses Course[] @relation("CourseCreator")
   enrollments CourseEnrollment[] @relation("StudentEnrollments")
   @@map("users")
@@ -116,7 +118,57 @@ model CourseLesson {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+// Relasi ke progres belajar seluruh siswa pada lesson ini
+progress LessonProgress[]
   @@unique([sectionId, order])
   @@index([sectionId])
   @@map("course_lessons")
+}
+
+
+
+// Menyimpan progres belajar setiap siswa pada setiap lesson
+model LessonProgress {
+  // ID unik progres belajar
+  id Int @id @default(autoincrement())
+
+  // ID siswa yang sedang mempelajari lesson
+  studentId Int
+
+  // ID lesson yang sedang dipelajari
+  lessonId Int
+
+  // Menandakan apakah lesson sudah diselesaikan
+  isCompleted Boolean @default(false)
+
+  // Waktu ketika lesson diselesaikan
+  // Null berarti lesson belum selesai
+  completedAt DateTime?
+
+  // Waktu terakhir siswa mengakses lesson
+  lastAccessedAt DateTime @default(now())
+
+  // Waktu pembuatan data progres
+  createdAt DateTime @default(now())
+
+  // Waktu terakhir data progres diperbarui
+  updatedAt DateTime @updatedAt
+
+  // Relasi ke siswa
+  student User @relation("StudentLessonProgress", fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Relasi ke lesson
+  lesson CourseLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Satu siswa hanya memiliki satu progres untuk setiap lesson
+  @@unique([studentId, lessonId])
+
+  // Index untuk mempercepat pencarian berdasarkan siswa
+  @@index([studentId])
+
+  // Index untuk mempercepat pencarian berdasarkan lesson
+  @@index([lessonId])
+
+  // Nama tabel di database MySQL
+  @@map("lesson_progress")
 }
