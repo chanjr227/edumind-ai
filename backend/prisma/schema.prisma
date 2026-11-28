@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -36,21 +35,23 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-// Relasi ke seluruh progres lesson yang dimiliki siswa
-lessonProgress LessonProgress[] @relation("StudentLessonProgress")
+  // Relasi ke seluruh progres lesson yang dimiliki siswa
+  lessonProgress LessonProgress[] @relation("StudentLessonProgress")
 
-// Relasi ke kursus yang dibuat
-courses Course[] @relation("CourseCreator")
+  // Relasi ke kursus yang dibuat
+  courses Course[] @relation("CourseCreator")
 
-// Relasi ke kursus yang diikuti
-enrollments CourseEnrollment[] @relation("StudentEnrollments")
+  // Relasi ke kursus yang diikuti
+  enrollments CourseEnrollment[] @relation("StudentEnrollments")
 
-// Relasi ke review yang dibuat siswa
-reviews CourseReview[]
+  // Relasi ke review yang dibuat siswa
+  reviews CourseReview[]
+
+  // Relasi ke seluruh sertifikat yang dimiliki siswa
+  certificates CourseCertificate[]
 
   @@map("users")
 }
-
 
 model Course {
   id          Int          @id @default(autoincrement())
@@ -62,17 +63,21 @@ model Course {
   status      CourseStatus @default(DRAFT)
 
   createdById Int
-  creator     User         @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  creator     User @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
   publishedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-// Relasi ke seluruh review yang diberikan siswa
-reviews CourseReview[]
+  // Relasi ke seluruh review yang diberikan siswa
+  reviews CourseReview[]
 
-sections CourseSection[]
-enrollments CourseEnrollment[]
+  // Relasi ke seluruh sertifikat yang diterbitkan untuk kursus ini
+  certificates CourseCertificate[]
+
+  sections    CourseSection[]
+  enrollments CourseEnrollment[]
+
   @@index([createdById])
   @@index([status])
   @@index([level])
@@ -80,12 +85,12 @@ enrollments CourseEnrollment[]
 }
 
 model CourseEnrollment {
-  id         Int      @id @default(autoincrement())
-  studentId  Int
-  courseId   Int
+  id        Int @id @default(autoincrement())
+  studentId Int
+  courseId  Int
 
-  student    User     @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   enrolledAt DateTime @default(now())
 
@@ -95,19 +100,18 @@ model CourseEnrollment {
   @@map("course_enrollments")
 }
 
-
 model CourseSection {
-  id          Int            @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   courseId    Int
-  title       String         @db.VarChar(200)
-  description String?        @db.Text
-  order       Int            @default(0)
+  title       String  @db.VarChar(200)
+  description String? @db.Text
+  order       Int     @default(0)
 
-  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons     CourseLesson[]
+  course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons CourseLesson[]
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([courseId, order])
   @@index([courseId])
@@ -115,28 +119,27 @@ model CourseSection {
 }
 
 model CourseLesson {
-  id              Int           @id @default(autoincrement())
+  id              Int     @id @default(autoincrement())
   sectionId       Int
-  title           String        @db.VarChar(200)
-  content         String?       @db.LongText
-  videoUrl        String?       @db.VarChar(500)
+  title           String  @db.VarChar(200)
+  content         String? @db.LongText
+  videoUrl        String? @db.VarChar(500)
   durationMinutes Int?
-  order           Int           @default(0)
-  isPreview       Boolean       @default(false)
+  order           Int     @default(0)
+  isPreview       Boolean @default(false)
 
-  section         CourseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section CourseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-// Relasi ke progres belajar seluruh siswa pada lesson ini
-progress LessonProgress[]
+  // Relasi ke progres belajar seluruh siswa pada lesson ini
+  progress LessonProgress[]
+
   @@unique([sectionId, order])
   @@index([sectionId])
   @@map("course_lessons")
 }
-
-
 
 // Menyimpan progres belajar setiap siswa pada setiap lesson
 model LessonProgress {
@@ -173,13 +176,10 @@ model LessonProgress {
 
   // Satu siswa hanya memiliki satu progres untuk setiap lesson
   @@unique([studentId, lessonId])
-
   // Index untuk mempercepat pencarian berdasarkan siswa
   @@index([studentId])
-
   // Index untuk mempercepat pencarian berdasarkan lesson
   @@index([lessonId])
-
   // Nama tabel di database MySQL
   @@map("lesson_progress")
 }
@@ -215,13 +215,52 @@ model CourseReview {
 
   // Satu siswa hanya boleh memberikan satu review pada satu kursus
   @@unique([studentId, courseId])
-
   // Index pencarian berdasarkan siswa
   @@index([studentId])
-
   // Index pencarian berdasarkan kursus
   @@index([courseId])
-
   // Nama tabel di database MySQL
   @@map("course_reviews")
+}
+
+// Menyimpan sertifikat kelulusan yang diperoleh siswa
+model CourseCertificate {
+  // ID unik sertifikat
+  id Int @id @default(autoincrement())
+
+  // ID siswa yang mendapatkan sertifikat
+  studentId Int
+
+  // ID kursus yang telah diselesaikan
+  courseId Int
+
+  // Nomor sertifikat unik untuk keperluan verifikasi
+  certificateNumber String @unique @db.VarChar(100)
+
+  // Snapshot nama siswa ketika sertifikat diterbitkan
+  studentName String @db.VarChar(150)
+
+  // Snapshot judul kursus ketika sertifikat diterbitkan
+  courseTitle String @db.VarChar(200)
+
+  // Tanggal siswa menyelesaikan seluruh lesson
+  completedAt DateTime
+
+  // Tanggal sertifikat diterbitkan
+  issuedAt DateTime @default(now())
+
+  // Relasi ke siswa pemilik sertifikat
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Relasi ke kursus yang diselesaikan
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Satu siswa hanya memperoleh satu sertifikat untuk satu kursus
+  @@unique([studentId, courseId])
+  // Index untuk pencarian sertifikat berdasarkan siswa
+  @@index([studentId])
+  // Index untuk pencarian sertifikat berdasarkan kursus
+  @@index([courseId])
+  // Nama tabel di database MySQL
+  @@map("course_certificates")
 }

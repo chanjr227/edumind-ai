@@ -1,3 +1,6 @@
+// Menghasilkan nomor sertifikat yang unik
+const { randomUUID } = require("crypto");
+
 const prisma = require("../config/prisma");
 
 // =====================================================
@@ -332,7 +335,7 @@ const getLessonContent = async (req, res) => {
 
 // =====================================================
 // COMPLETE LESSON
-// Menandai lesson sebagai selesai oleh siswa
+// Menandai lesson selesai dan menerbitkan sertifikat otomatis
 // =====================================================
 const completeLesson = async (req, res) => {
   try {
@@ -361,6 +364,7 @@ const completeLesson = async (req, res) => {
             course: {
               select: {
                 id: true,
+                title: true,
                 status: true,
               },
             },
@@ -424,7 +428,11 @@ const completeLesson = async (req, res) => {
       });
     }
 
+    // Mengambil waktu penyelesaian saat ini
+    const completedAt = existingProgress.completedAt || new Date();
+
     // Memperbarui progres menjadi selesai
+    // Waktu penyelesaian lama dipertahankan jika lesson sudah selesai
     const progress = await prisma.lessonProgress.update({
       where: {
         studentId_lessonId: {
@@ -434,20 +442,141 @@ const completeLesson = async (req, res) => {
       },
       data: {
         isCompleted: true,
-        completedAt: new Date(),
+        completedAt,
         lastAccessedAt: new Date(),
       },
     });
 
-    // Mengirimkan hasil pembaruan progres
+    // Menghitung seluruh lesson dalam kursus
+    const totalLessons = await prisma.courseLesson.count({
+      where: {
+        section: {
+          courseId: course.id,
+        },
+      },
+    });
+
+    // Menghitung lesson yang sudah diselesaikan oleh siswa
+    const completedLessons = await prisma.lessonProgress.count({
+      where: {
+        studentId,
+        isCompleted: true,
+        lesson: {
+          section: {
+            courseId: course.id,
+          },
+        },
+      },
+    });
+
+    // Menghitung persentase penyelesaian kursus
+    const progressPercentage =
+      totalLessons > 0
+        ? Math.round((completedLessons / totalLessons) * 100)
+        : 0;
+
+    // Menentukan apakah seluruh lesson sudah selesai
+    const isCourseCompleted =
+      totalLessons > 0 && completedLessons === totalLessons;
+
+    // Menyiapkan variabel sertifikat
+    let certificate = null;
+    let certificateIssued = false;
+
+    // Sertifikat hanya diterbitkan jika seluruh lesson selesai
+    if (isCourseCompleted) {
+      // Memeriksa apakah sertifikat sudah pernah diterbitkan
+      certificate = await prisma.courseCertificate.findUnique({
+        where: {
+          studentId_courseId: {
+            studentId,
+            courseId: course.id,
+          },
+        },
+      });
+
+      // Membuat sertifikat jika belum tersedia
+      if (!certificate) {
+        // Mengambil nama siswa untuk disimpan sebagai snapshot
+        const student = await prisma.user.findUnique({
+          where: {
+            id: studentId,
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        // Memastikan data siswa tersedia
+        if (!student) {
+          return res.status(404).json({
+            success: false,
+            message: "Student not found",
+          });
+        }
+
+        // Membuat nomor sertifikat yang unik
+        const certificateNumber = `EDU-${new Date().getFullYear()}-${randomUUID()
+          .slice(0, 8)
+          .toUpperCase()}`;
+
+        try {
+          // Menyimpan sertifikat kelulusan
+          certificate = await prisma.courseCertificate.create({
+            data: {
+              studentId,
+              courseId: course.id,
+              certificateNumber,
+              studentName: student.name,
+              courseTitle: course.title,
+              completedAt: new Date(),
+            },
+          });
+
+          certificateIssued = true;
+        } catch (error) {
+          // Mengantisipasi permintaan bersamaan yang membuat sertifikat ganda
+          if (error.code === "P2002") {
+            certificate = await prisma.courseCertificate.findUnique({
+              where: {
+                studentId_courseId: {
+                  studentId,
+                  courseId: course.id,
+                },
+              },
+            });
+
+            // Melempar error jika sertifikat belum ditemukan
+            if (!certificate) {
+              throw error;
+            }
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
+
+    // Mengirimkan hasil pembaruan progres dan sertifikat
     return res.status(200).json({
       success: true,
-      message: "Lesson completed successfully",
+      message: certificateIssued
+        ? "Lesson completed and course certificate issued successfully"
+        : "Lesson completed successfully",
       data: {
         progress,
+        courseCompletion: {
+          totalLessons,
+          completedLessons,
+          progressPercentage,
+          isCompleted: isCourseCompleted,
+        },
+        certificateIssued,
+        certificate,
       },
     });
   } catch (error) {
+    // Mencatat error untuk kebutuhan debugging
     console.error("Complete Lesson Error:", error);
 
     return res.status(500).json({

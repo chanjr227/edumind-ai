@@ -1,0 +1,110 @@
+/* Halaman utama verifikasi sertifikat */
+.verification-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: #080f20;
+  font-family: Arial, sans-serif;
+}
+
+/* Kartu verifikasi */
+.verification-card {
+  width: 100%;
+  max-width: 650px;
+  padding: 40px;
+  border-radius: 18px;
+  background: #111c32;
+  border: 1px solid #293b59;
+  color: #f8fafc;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* Logo brand */
+.verification-brand {
+  color: #d4af37;
+  font-weight: bold;
+  letter-spacing: 4px;
+}
+
+/* Ikon status sertifikat */
+.verification-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: #164e63;
+  color: #67e8f9;
+  font-size: 36px;
+  font-weight: bold;
+}
+
+/* Judul verifikasi */
+.verification-card h1 {
+  margin: 12px 0;
+  font-size: 30px;
+}
+
+/* Deskripsi */
+.verification-description {
+  color: #a8b5c9;
+  line-height: 1.7;
+}
+
+/* Detail sertifikat */
+.verification-details {
+  margin-top: 30px;
+  text-align: left;
+  border-top: 1px solid #293b59;
+}
+
+/* Setiap baris detail */
+.verification-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 17px 0;
+  border-bottom: 1px solid #293b59;
+}
+
+/* Label informasi */
+.verification-details span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Nilai informasi */
+.verification-details strong {
+  color: #f8fafc;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+/* Footer */
+.verification-footer {
+  margin-top: 28px;
+  color: #d4af37;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* Status tidak valid */
+.verification-card.invalid {
+  border-color: #991b1b;
+}
+
+.verification-card.invalid h1 {
+  color: #f87171;
+}
+
+.verification-card.invalid span {
+  display: block;
+  margin-top: 25px;
+  color: #d4af37;
+  letter-spacing: 3px;
+}

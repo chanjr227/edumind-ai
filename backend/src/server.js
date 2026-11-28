@@ -14,6 +14,8 @@ const lessonRoutes = require("./routes/lessonRoutes");
 const learningRoutes = require("./routes/learningRoutes");
 // Mengambil routes course review
 const reviewRoutes = require("./routes/reviewRoutes");
+// Mengimpor routes sertifikat
+const certificateRoutes = require("./routes/certificateRoutes");
 
 dotenv.config();
 
@@ -53,6 +55,9 @@ app.use("/api/learning", learningRoutes);
 
 // Menghubungkan endpoint course review
 app.use("/api/reviews", reviewRoutes);
+
+// Menghubungkan endpoint sertifikat ke aplikasi
+app.use("/api/certificates", certificateRoutes);
 
 // Logger
 if (process.env.NODE_ENV === "development") {
